@@ -1,43 +1,56 @@
-
+import os
+import uuid
 from aiogram import Bot, Dispatcher, types
 from aiogram.utils import executor
 import yt_dlp
-import os
 
-TOKEN = "8520409146:AAGqLnTKaL_7E_mVIV0euabyTe2izFiJTEk"
-PLAYLIST_CHAT_ID = -1003812294822  # твой id канала
+TOKEN = os.getenv("8520409146:AAGqLnTKaL_7E_mVIV0euabyTe2izFiJTEk")  # Читаем из переменных окружения
+PLAYLIST_CHAT_ID = int(os.getenv("-1003812294822", "-1003812294822"))
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher(bot)
 
 def download_audio(query):
+    # Уникальное имя для каждого запроса
+    unique_id = str(uuid.uuid4())[:8]
+    out_template = f"track_{unique_id}.%(ext)s"
+    final_mp3 = f"track_{unique_id}.mp3"
+    
     ydl_opts = {
         'format': 'bestaudio/best',
-        'outtmpl': 'track.%(ext)s',
+        'outtmpl': out_template,
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
         }],
-        'quiet': True
+        'quiet': True,
+        'no_warnings': True,
+        'extract_flat': False,
+        'source_address': '0.0.0.0',  # Для Railway
     }
-
-    # Удаляем старый файл, если есть
-    if os.path.exists("track.mp3"):
-        os.remove("track.mp3")
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(f"ytsearch:{query}", download=True)
         title = info['entries'][0]['title']
-        return "track.mp3", title
+        
+    return final_mp3, title
 
 @dp.message_handler()
 async def search_music(message: types.Message):
-    file, title = download_audio(message.text)
-
-    kb = types.InlineKeyboardMarkup()
-    kb.add(types.InlineKeyboardButton("💾 Сохранить в плейлист", callback_data="save"))
-
-    await message.answer_audio(open(file, 'rb'), title=title, reply_markup=kb)
+    await message.answer("🔍 Ищу...")
+    
+    try:
+        file, title = download_audio(message.text)
+        
+        kb = types.InlineKeyboardMarkup()
+        kb.add(types.InlineKeyboardButton("💾 Сохранить в плейлист", callback_data="save"))
+        
+        with open(file, 'rb') as audio:
+            await message.answer_audio(audio, title=title, reply_markup=kb)
+        
+        os.remove(file)  # Удаляем после отправки
+    except Exception as e:
+        await message.answer(f"❌ Ошибка: {str(e)}")
 
 @dp.callback_query_handler(lambda c: c.data == "save")
 async def save_track(callback: types.CallbackQuery):
