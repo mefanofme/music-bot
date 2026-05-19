@@ -4,7 +4,7 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.utils import executor
 import yt_dlp
 
-TOKEN = os.getenv("8850478810:AAEcyKAtb77MCoDgmRIs50Hg1OpfeVNklr4")  # Читаем из переменных окружения
+TOKEN = os.getenv("8850478810:AAGS3bVqxMfC_oSO2mfVX38onOftZn6UKSo")  # Читаем из переменных окружения
 PLAYLIST_CHAT_ID = int(os.getenv("-1003812294822", "-1003812294822"))
 
 bot = Bot(token=TOKEN)
